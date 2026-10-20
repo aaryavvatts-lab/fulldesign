@@ -6,6 +6,8 @@ root = pathlib.Path(__file__).resolve().parent.parent
 skills = json.loads((root / "skills.json").read_text())["skills"]
 
 def link(s):
+    if not s["repo"]:
+        return None
     base = f"https://github.com/{s['repo']}"
     return f"{base}/tree/HEAD/{s['path']}" if s["path"] else base
 
@@ -16,16 +18,18 @@ for s in skills:
 lines = [
     "# fulldesign catalog",
     "",
-    f"{len(skills)} design skills `/fulldesign` can choose from. Each row: skill, source link, one-line description.",
+    f"{len(skills)} entries `/fulldesign` can choose from. Each row: skill (linked to its source), what it does, and when to use it.",
     "Skills marked (21st) install through the 21st CLI; the reference library is a folder of files, not a skill.",
     "",
 ]
 table = []
 for g, items in groups.items():
-    lines += [f"## {g}", "", "| Skill | What it does |", "|---|---|"]
-    table += [f"### {g}", "", "| Skill | What it does |", "|---|---|"]
+    lines += [f"## {g}", "", "| Skill | What it does | Use it when |", "|---|---|---|"]
+    table += [f"### {g}", "", "| Skill | What it does | Use it when |", "|---|---|---|"]
     for s in items:
-        row = f"| [`{s['name']}`]({link(s)}) | {s['desc']} |"
+        l = link(s)
+        name = f"[`{s['name']}`]({l})" if l else f"`{s['name']}` (manual)"
+        row = f"| {name} | {s['desc']} | {s['use']} |"
         lines.append(row)
         table.append(row)
     lines.append("")

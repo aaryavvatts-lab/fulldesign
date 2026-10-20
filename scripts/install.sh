@@ -59,13 +59,24 @@ say "Playwright CLI and its skill"
 run npm install -g @playwright/cli@latest >/dev/null 2>&1 || FAILED+=("playwright-cli")
 (cd "$HOME" && run playwright-cli install --skills </dev/null >/dev/null 2>&1) || FAILED+=("playwright-skill")
 
-say "Awesome DESIGN.md library (84 brand design systems) into $REFS_DIR"
+say "Reference libraries of brand DESIGN.md files into $REFS_DIR"
 run mkdir -p "$REFS_DIR"
-if [ -d "$REFS_DIR/awesome-design-md/.git" ]; then
-  run git -C "$REFS_DIR/awesome-design-md" pull -q --ff-only || FAILED+=("awesome-design-md")
-else
-  run git clone -q --depth 1 https://github.com/VoltAgent/awesome-design-md.git "$REFS_DIR/awesome-design-md" || FAILED+=("awesome-design-md")
-fi
+CLONES="$(python3 -I - "$ROOT/skills.json" <<'PY'
+import json, sys
+for s in json.load(open(sys.argv[1]))["skills"]:
+    if s["install"] == "clone":
+        print(s["name"] + "\t" + s["repo"])
+PY
+)"
+while IFS=$'\t' read -r cname crepo; do
+  [ -z "$cname" ] && continue
+  echo "  $cname"
+  if [ -d "$REFS_DIR/$cname/.git" ]; then
+    run git -C "$REFS_DIR/$cname" pull -q --ff-only || FAILED+=("$cname")
+  else
+    run git clone -q --depth 1 "https://github.com/$crepo.git" "$REFS_DIR/$cname" || FAILED+=("$cname")
+  fi
+done <<< "$CLONES"
 
 if [ "$DRY" = 0 ]; then
   say "Verifying"
@@ -77,12 +88,14 @@ for s in d:
         print(s["name"])
 PY
 )"
-  TOTAL="$(python3 -I -c "import json,sys;print(sum(1 for s in json.load(open(sys.argv[1]))['skills'] if s['install']!='clone'))" "$ROOT/skills.json")"
+  TOTAL="$(python3 -I -c "import json,sys;print(sum(1 for s in json.load(open(sys.argv[1]))['skills'] if s['install'] in ('skills','21st','playwright')))" "$ROOT/skills.json")"
   if [ -z "$MISSING" ]; then echo "  All $TOTAL skills present."; else echo "  Missing skills:"; echo "$MISSING" | sed 's/^/    - /'; fi
   [ "${#FAILED[@]}" -gt 0 ] && echo "  Steps that reported errors: ${FAILED[*]}"
 fi
 
 cat <<'MSG'
+
+Manual item: animate-studio (by @guipaulinooo) is not redistributed here; see the README to add it yourself.
 
 Done. Next steps:
   1. Restart Claude Code so it loads the new skills.
